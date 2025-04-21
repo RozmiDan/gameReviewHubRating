@@ -28,7 +28,7 @@ func Register(grpcServer *grpc.Server, svc RatingService) {
 func (s *serverAPI) SubmitRating(ctx context.Context,
 	req *ratingv1.SubmitRatingRequest) (*ratingv1.SubmitRatingResponse, error) {
 
-	if req.GameId == "" || req.UserId == "" || req.Rating == 0 {
+	if req.GetGameId() == "" || req.GetUserId() == "" || req.GetRating() == 0 {
 		return nil, status.Error(codes.InvalidArgument, "invalid entered data")
 	}
 
@@ -70,7 +70,7 @@ func (s *serverAPI) GetGameRating(ctx context.Context,
 func (s *serverAPI) GetTopGames(ctx context.Context,
 	req *ratingv1.GetTopGamesRequest) (*ratingv1.GetTopGamesResponse, error) {
 
-	if req.GetLimit() != 20 {
+	if req.GetLimit() != 10 {
 		return &ratingv1.GetTopGamesResponse{}, status.Error(codes.InvalidArgument, "invalid limit")
 	}
 

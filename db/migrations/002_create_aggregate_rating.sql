@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS game_ratings (
   game_id        UUID    PRIMARY KEY,
   ratings_count  BIGINT  NOT NULL DEFAULT 0,
   ratings_sum    BIGINT  NOT NULL DEFAULT 0,
-  average_rating NUMERIC(3,2)
+  average_rating NUMERIC(4,2)
 );
 
 -- +goose Down
