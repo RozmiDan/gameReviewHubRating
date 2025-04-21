@@ -1,13 +1,17 @@
 package app
 
 import (
-	"context"
+	"net"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/RozmiDan/gameReviewHubRating/db"
 	"github.com/RozmiDan/gameReviewHubRating/internal/config"
+	rating_server "github.com/RozmiDan/gameReviewHubRating/internal/controller/grpc"
+	postgres_storage "github.com/RozmiDan/gameReviewHubRating/internal/storage/postgres"
+	"github.com/RozmiDan/gameReviewHubRating/internal/usecase"
+	"google.golang.org/grpc"
 
 	"github.com/RozmiDan/gameReviewHubRating/pkg/logger"
 	"github.com/RozmiDan/gameReviewHubRating/pkg/postgres"
@@ -32,11 +36,33 @@ func Run(cfg *config.Config) {
 
 	defer pg.Close()
 
-	// server
-	// server := httpserver.InitServer(cfg, logger, pg)
+	repo := postgres_storage.New(pg, logger)
+	ratingUseCase := usecase.NewRatingService(repo, logger)
 
-	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+	grpcSrv := grpc.NewServer()
+	rating_server.Register(grpcSrv, ratingUseCase)
+
+	addr := ":50051"
+	lis, err := net.Listen("tcp", addr)
+	if err != nil {
+		logger.Fatal("failed to listen", zap.Error(err))
+	}
+
+	// graceful shutdown
+	go func() {
+		c := make(chan os.Signal, 1)
+		signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
+		<-c
+		grpcSrv.GracefulStop()
+	}()
+
+	logger.Info("starting gRPC server", zap.String("addr", addr))
+	if err := grpcSrv.Serve(lis); err != nil {
+		logger.Fatal("gRPC server error", zap.Error(err))
+	}
+
+	// stop := make(chan os.Signal, 1)
+	// signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 
 	// go func() {
 	// 	logger.Info("starting server", zap.String("port", cfg.HttpInfo.Port))
@@ -60,22 +86,7 @@ func Run(cfg *config.Config) {
 	// }
 
 	logger.Info("Connected postgres\n")
-	query, args, err := pg.Builder.Insert("ratings").
-		Columns("user_id", "game_id", "rating").
-		Values("e134fa44-e6f4-48e5-8c21-e6bb1ea538f8",
-			"d9c2a726-c1fe-4342-855e-f3d3f0883345", 10).
-		ToSql()
 
-	if err != nil {
-		logger.Error("ошибка при создании запроса:",
-			zap.Error(err))
-	}
-
-	cmnd, err := pg.Pool.Exec(context.Background(), query, args...)
-	if err != nil {
-		logger.Error("Some error", zap.Error(err))
-	}
-	logger.Info(cmnd.String())
 	logger.Info("Finishing programm")
 
 }
