@@ -6,7 +6,7 @@ import (
 
 	"github.com/RozmiDan/gameReviewHubRating/internal/entity"
 	"github.com/RozmiDan/gameReviewHubRating/pkg/postgres"
-	"github.com/jackc/pgx"
+	"github.com/jackc/pgx/v5"
 	"go.uber.org/zap"
 )
 
@@ -52,6 +52,7 @@ func (r *RatingRepository) SubmitRatingRepo(ctx context.Context, userID string, 
         ON CONFLICT (user_id, game_id)
         DO UPDATE SET rating = EXCLUDED.rating
     `, userID, gameID, rating)
+
 	if err != nil {
 		logger.Error("upsert ratings failed", zap.Error(err))
 		return err
@@ -74,6 +75,7 @@ func (r *RatingRepository) SubmitRatingRepo(ctx context.Context, userID string, 
             WHERE game_id = $2
         `, delta, gameID)
 	}
+
 	if err != nil {
 		logger.Error("upsert game_ratings failed", zap.Error(err))
 		return err
@@ -84,6 +86,7 @@ func (r *RatingRepository) SubmitRatingRepo(ctx context.Context, userID string, 
         SET average_rating = ROUND(ratings_sum::numeric / ratings_count, 2)
         WHERE game_id = $1
     `, gameID)
+
 	if err != nil {
 		logger.Error("recalculate average failed", zap.Error(err))
 		return err
@@ -107,6 +110,7 @@ func (r *RatingRepository) SubmitRatingRepo(ctx context.Context, userID string, 
 
 func (r *RatingRepository) GetGameRatingRepo(ctx context.Context, gameID string) (entity.GameRating, error) {
 	logger := r.logger.With(zap.String("func", "GetGameRatingRepo"))
+
 	row := r.pg.Pool.QueryRow(ctx, `
       SELECT game_id, average_rating, ratings_count
       FROM game_ratings
@@ -122,9 +126,41 @@ func (r *RatingRepository) GetGameRatingRepo(ctx context.Context, gameID string)
 		logger.Error("scan failed", zap.Error(err))
 		return entity.GameRating{}, err
 	}
+
+	logger.Info("game successfuly found",
+		zap.String("game_id", gameID),
+	)
+
 	return gameRat, nil
 }
 
 func (r *RatingRepository) GetTopGamesRepo(ctx context.Context, limit, offset int32) ([]entity.GameRating, error) {
-	return []entity.GameRating{}, nil
+	logger := r.logger.With(zap.String("func", "GetTopGamesRepo"))
+
+	rows, err := r.pg.Pool.Query(ctx, `
+      SELECT game_id, average_rating, ratings_count
+      FROM game_ratings
+      ORDER BY average_rating DESC
+      LIMIT $1 OFFSET $2
+    `, limit, offset*limit)
+
+	if err != nil {
+		logger.Error("query failed", zap.Error(err))
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []entity.GameRating
+	for rows.Next() {
+		var gr entity.GameRating
+		if err := rows.Scan(&gr.GameId, &gr.AverageRating, &gr.RatingsCount); err != nil {
+			logger.Error("scan failed", zap.Error(err))
+			return nil, err
+		}
+		out = append(out, gr)
+	}
+
+	logger.Info("games successfuly found", zap.Int("count", len(out)))
+
+	return out, nil
 }

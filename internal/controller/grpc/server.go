@@ -2,6 +2,7 @@ package rating_server
 
 import (
 	"context"
+	"errors"
 
 	"github.com/RozmiDan/gameReviewHubRating/internal/entity"
 	ratingv1 "github.com/RozmiDan/gamehub-protos/gen/go/gamehub"
@@ -54,12 +55,20 @@ func (s *serverAPI) GetGameRating(ctx context.Context,
 	resEnt, err := s.service.GetGameRating(ctx, req.GameId)
 
 	if err != nil {
+		if errors.Is(err, entity.ErrGameNotFound) {
+			return &ratingv1.GetGameRatingResponse{
+				GameId:        "",
+				AverageRating: 0,
+				RatingsCount:  0,
+			}, status.Error(codes.NotFound, "gameID not found")
+		}
 		return &ratingv1.GetGameRatingResponse{
 			GameId:        "",
 			AverageRating: 0,
 			RatingsCount:  0,
-		}, status.Error(codes.NotFound, "rating not found")
+		}, status.Error(codes.Internal, "internal error")
 	}
+
 	return &ratingv1.GetGameRatingResponse{
 		GameId:        resEnt.GameId,
 		AverageRating: float64(resEnt.AverageRating),

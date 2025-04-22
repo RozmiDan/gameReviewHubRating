@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"math"
 
 	"github.com/RozmiDan/gameReviewHubRating/internal/entity"
 	"go.uber.org/zap"
@@ -47,8 +48,10 @@ func (s *ratingService) GetGameRating(ctx context.Context, gameID string) (entit
 
 	game, err := s.repo.GetGameRatingRepo(ctx, gameID)
 
+	game.AverageRating = math.Round(game.AverageRating*100) / 100
+
 	if err != nil {
-		logger.Error("some error", zap.Error(err))
+		logger.Error("found error", zap.Error(err))
 		return entity.GameRating{}, err
 	}
 
@@ -59,8 +62,6 @@ func (s *ratingService) GetGameRating(ctx context.Context, gameID string) (entit
 
 func (s *ratingService) GetTopGames(ctx context.Context, limit, offset int32) ([]entity.GameRating, error) {
 	logger := s.logger.With(zap.String("func", "GetTopGames"))
-
-	//TODO : check the uuid is correct
 
 	list, err := s.repo.GetTopGamesRepo(ctx, limit, offset)
 

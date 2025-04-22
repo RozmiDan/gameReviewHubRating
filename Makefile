@@ -12,7 +12,7 @@ run-app:
 # Запуск PostgreSQL в Docker с параметрами из .env
 db-up:
 	@echo "Запуск контейнера PostgreSQL..."
-	docker run --rm --name local-postgres \
+	docker run --name local-postgres \
 	  -e POSTGRES_USER=${POSTGRES_USER} \
 	  -e POSTGRES_PASSWORD=${POSTGRES_PASSWORD} \
 	  -e POSTGRES_DB=${POSTGRES_DB} \

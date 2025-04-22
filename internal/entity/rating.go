@@ -2,6 +2,6 @@ package entity
 
 type GameRating struct {
 	GameId        string
-	AverageRating float32
+	AverageRating float64
 	RatingsCount  int64
 }
