@@ -11,6 +11,9 @@ import (
 	rating_server "github.com/RozmiDan/gameReviewHubRating/internal/controller/grpc"
 	postgres_storage "github.com/RozmiDan/gameReviewHubRating/internal/storage/postgres"
 	"github.com/RozmiDan/gameReviewHubRating/internal/usecase"
+	"github.com/grpc-ecosystem/go-grpc-middleware"
+    grpc_recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
+    grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
 	"google.golang.org/grpc"
 
 	"github.com/RozmiDan/gameReviewHubRating/pkg/logger"
@@ -39,7 +42,12 @@ func Run(cfg *config.Config) {
 	repo := postgres_storage.New(pg, logger)
 	ratingUseCase := usecase.NewRatingService(repo, logger)
 
-	grpcSrv := grpc.NewServer()
+	grpcSrv := grpc.NewServer(
+		grpc_middleware.WithUnaryServerChain(
+			grpc_recovery.UnaryServerInterceptor(),
+			grpc_zap.UnaryServerInterceptor(logger),
+		),
+	)
 	rating_server.Register(grpcSrv, ratingUseCase)
 
 	addr := ":50051"

@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"errors"
 	"math"
 
 	"github.com/RozmiDan/gameReviewHubRating/internal/entity"
@@ -29,8 +30,6 @@ func NewRatingService(repository RatingRepository, logger *zap.Logger) *ratingSe
 func (s *ratingService) SubmitRating(ctx context.Context, userID string, gameID string, rating int32) error {
 	logger := s.logger.With(zap.String("func", "SubmitRating"))
 
-	//TODO : check the uuid is correct
-
 	if err := s.repo.SubmitRatingRepo(ctx, userID, gameID, rating); err != nil {
 		logger.Error("some error", zap.Error(err))
 		return err
@@ -44,14 +43,16 @@ func (s *ratingService) SubmitRating(ctx context.Context, userID string, gameID 
 func (s *ratingService) GetGameRating(ctx context.Context, gameID string) (entity.GameRating, error) {
 	logger := s.logger.With(zap.String("func", "GetGameRating"))
 
-	//TODO : check the uuid is correct
-
 	game, err := s.repo.GetGameRatingRepo(ctx, gameID)
 
 	game.AverageRating = math.Round(game.AverageRating*100) / 100
 
 	if err != nil {
-		logger.Error("found error", zap.Error(err))
+		if errors.Is(err, entity.ErrGameNotFound) {
+			logger.Info("game not found", zap.Error(err))
+			return entity.GameRating{}, err
+		}
+		logger.Info("some error", zap.Error(err))
 		return entity.GameRating{}, err
 	}
 

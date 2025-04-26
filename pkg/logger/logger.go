@@ -34,7 +34,7 @@ func NewLogger(env string) *zap.Logger {
 		cfg.Level = zap.NewAtomicLevelAt(zap.InfoLevel)
 	}
 
-	cfg.OutputPaths = []string{logPath}
+	cfg.OutputPaths = []string{"stdout", logPath}
 
 	logger, err := cfg.Build()
 	if err != nil {

@@ -6,6 +6,7 @@ import (
 
 	"github.com/RozmiDan/gameReviewHubRating/internal/entity"
 	ratingv1 "github.com/RozmiDan/gamehub-protos/gen/go/gamehub"
+	"github.com/google/uuid"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -33,6 +34,10 @@ func (s *serverAPI) SubmitRating(ctx context.Context,
 		return nil, status.Error(codes.InvalidArgument, "invalid entered data")
 	}
 
+	if !validateUUID(req.GetUserId(), req.GetGameId()) {
+		return nil, status.Error(codes.InvalidArgument, "invalid entered uuid")
+	}
+
 	if err := s.service.SubmitRating(ctx, req.UserId, req.GameId, req.Rating); err != nil {
 		return &ratingv1.SubmitRatingResponse{Success: false}, status.Error(codes.Internal, "could not submit rating")
 	}
@@ -45,28 +50,20 @@ func (s *serverAPI) GetGameRating(ctx context.Context,
 	req *ratingv1.GetGameRatingRequest) (*ratingv1.GetGameRatingResponse, error) {
 
 	if req.GetGameId() == "" {
-		return &ratingv1.GetGameRatingResponse{
-			GameId:        "",
-			AverageRating: 0,
-			RatingsCount:  0,
-		}, status.Error(codes.InvalidArgument, "invalid gameID")
+		return &ratingv1.GetGameRatingResponse{}, status.Error(codes.InvalidArgument, "invalid gameID")
+	}
+
+	if !validateUUID(req.GetGameId()) {
+		return nil, status.Error(codes.InvalidArgument, "invalid entered uuid")
 	}
 
 	resEnt, err := s.service.GetGameRating(ctx, req.GameId)
 
 	if err != nil {
 		if errors.Is(err, entity.ErrGameNotFound) {
-			return &ratingv1.GetGameRatingResponse{
-				GameId:        "",
-				AverageRating: 0,
-				RatingsCount:  0,
-			}, status.Error(codes.NotFound, "gameID not found")
+			return &ratingv1.GetGameRatingResponse{}, status.Error(codes.NotFound, "gameID not found")
 		}
-		return &ratingv1.GetGameRatingResponse{
-			GameId:        "",
-			AverageRating: 0,
-			RatingsCount:  0,
-		}, status.Error(codes.Internal, "internal error")
+		return &ratingv1.GetGameRatingResponse{}, status.Error(codes.Internal, "internal error")
 	}
 
 	return &ratingv1.GetGameRatingResponse{
@@ -98,4 +95,13 @@ func (s *serverAPI) GetTopGames(ctx context.Context,
 		})
 	}
 	return resp, nil
+}
+
+func validateUUID(uuids ...string) bool {
+	for _, it := range uuids {
+		if err := uuid.Validate(it); err != nil {
+			return false
+		}
+	}
+	return true
 }

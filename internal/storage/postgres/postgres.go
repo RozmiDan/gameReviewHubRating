@@ -120,7 +120,7 @@ func (r *RatingRepository) GetGameRatingRepo(ctx context.Context, gameID string)
 	var gameRat entity.GameRating
 	if err := row.Scan(&gameRat.GameId, &gameRat.AverageRating, &gameRat.RatingsCount); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			logger.Error("gameID not found", zap.Error(err))
+			logger.Info("gameID not found")
 			return entity.GameRating{}, entity.ErrGameNotFound
 		}
 		logger.Error("scan failed", zap.Error(err))
