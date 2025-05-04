@@ -12,7 +12,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-type RatingService interface {
+type RatingUseCase interface {
 	SubmitRating(ctx context.Context, userID string, gameID string, rating int32) error
 	GetGameRating(ctx context.Context, gameID string) (entity.GameRating, error)
 	GetTopGames(ctx context.Context, limit, offset int32) ([]entity.GameRating, error)
@@ -20,11 +20,11 @@ type RatingService interface {
 
 type serverAPI struct {
 	ratingv1.UnimplementedRatingServiceServer
-	service RatingService
+	usecase RatingUseCase
 }
 
-func Register(grpcServer *grpc.Server, svc RatingService) {
-	ratingv1.RegisterRatingServiceServer(grpcServer, &serverAPI{service: svc})
+func Register(grpcServer *grpc.Server, uc RatingUseCase) {
+	ratingv1.RegisterRatingServiceServer(grpcServer, &serverAPI{usecase: uc})
 }
 
 func (s *serverAPI) SubmitRating(ctx context.Context,
@@ -38,7 +38,7 @@ func (s *serverAPI) SubmitRating(ctx context.Context,
 		return nil, status.Error(codes.InvalidArgument, "invalid entered uuid")
 	}
 
-	if err := s.service.SubmitRating(ctx, req.UserId, req.GameId, req.Rating); err != nil {
+	if err := s.usecase.SubmitRating(ctx, req.UserId, req.GameId, req.Rating); err != nil {
 		return &ratingv1.SubmitRatingResponse{Success: false}, status.Error(codes.Internal, "could not submit rating")
 	}
 
@@ -57,7 +57,7 @@ func (s *serverAPI) GetGameRating(ctx context.Context,
 		return nil, status.Error(codes.InvalidArgument, "invalid entered uuid")
 	}
 
-	resEnt, err := s.service.GetGameRating(ctx, req.GameId)
+	resEnt, err := s.usecase.GetGameRating(ctx, req.GameId)
 
 	if err != nil {
 		if errors.Is(err, entity.ErrGameNotFound) {
@@ -80,7 +80,7 @@ func (s *serverAPI) GetTopGames(ctx context.Context,
 		return &ratingv1.GetTopGamesResponse{}, status.Error(codes.InvalidArgument, "invalid limit")
 	}
 
-	list, err := s.service.GetTopGames(ctx, req.Limit, req.Offset)
+	list, err := s.usecase.GetTopGames(ctx, req.Limit, req.Offset)
 
 	if err != nil {
 		return nil, status.Error(codes.Internal, "could not get top games")

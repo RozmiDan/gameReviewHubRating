@@ -10,10 +10,11 @@ import (
 
 type (
 	Config struct {
-		Env        string     `yaml:"env" env:"ENV" env-default:"local"`
-		PostgreURL postgreURL `yaml:"postgres"`
-		AppInfo    appStruct  `yaml:"app"`
-		HttpInfo   httpStruct `yaml:"http"`
+		Env        string      `yaml:"env" env:"ENV" env-default:"local"`
+		PostgreURL postgreURL  `yaml:"postgres"`
+		AppInfo    appStruct   `yaml:"app"`
+		GRPC       grpcStruct  `yaml:"grpc"`
+		Kafka      KafkaConfig `yaml:"kafka"`
 	}
 
 	appStruct struct {
@@ -21,10 +22,8 @@ type (
 		Version string `yaml:"version" env-required:"true"`
 	}
 
-	httpStruct struct {
-		Port        string        `yaml:"port" env-default:"8080"`
-		Timeout     time.Duration `yaml:"timeout" env-default:"5s"`
-		IdleTimeout time.Duration `yaml:"idle_timeout" env-default:"10s"`
+	grpcStruct struct {
+		Address string `yaml:"address" env-required:"true"`
 	}
 
 	postgreURL struct {
@@ -35,6 +34,16 @@ type (
 		User      string `yaml:"user" env-required:"true"`
 		Password  string `yaml:"password" env-required:"true"`
 		PgPoolMax uint16 `yaml:"pg_pool_max" env-required:"true"`
+	}
+
+	KafkaConfig struct {
+		Brokers      []string      `yaml:"brokers"`
+		TopicRatings string        `yaml:"topic_ratings"`
+		GroupID      string        `yaml:"group_id"`
+		DialTimeout  time.Duration `yaml:"dial_timeout"`
+		ReadTimeout  time.Duration `yaml:"read_timeout"`
+		MinBytes     int           `yaml:"min_bytes"`
+		MaxBytes     int           `yaml:"max_bytes"`
 	}
 )
 
